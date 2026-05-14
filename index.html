@@ -20,9 +20,15 @@
         .denom-btn { background: #fff; border: 1px solid #333; width: 28px; height: 28px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .denom-btn:active { background: #ddd; }
         .denom-input-wrap { display: flex; align-items: center; border: 1px solid #999; background: #fff; padding: 2px 6px; width: 72px; }
+        .denom-count-wrap { display: flex; align-items: center; border: 1px solid #ccc; background: #fff; padding: 2px 3px; width: 45px; }
         .denom-dollar { font-size: 14px; font-weight: bold; color: #333; margin-right: 2px; user-select: none; }
         .denom-value { width: 100%; border: none; outline: none; font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; }
         .denom-value::-webkit-outer-spin-button, .denom-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .denom-count { width: 100%; border: none; outline: none; font-size: 12px; font-weight: normal; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; color: #777; }
+        .denom-count::-webkit-outer-spin-button, .denom-count::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .denom-count-label { font-size: 11px; color: #999; margin-right: 1px; user-select: none; }
+        .denom-warning { font-size: 12px; color: #d9534f; margin-left: 4px; user-select: none; }
+        .denom-change { font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; margin-left: 8px; }
         .change-order-section { margin-top: 15px; }
         .section-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
         .change-order-box { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 13px; }
@@ -76,6 +82,17 @@
             '20': { value: 0, increment: 20 },
             '50': { value: 0, increment: 50 },
             '100': { value: 0, increment: 100 }
+        };
+        const DENOMINATION_VALUES = {
+            'N': 2,      // $2 per nickel roll
+            'D': 5,      // $5 per dime roll
+            'Q': 10,     // $10 per quarter roll
+            '1': 1,      // $1 per bill
+            '5': 5,      // $5 per bill
+            '10': 10,    // $10 per bill
+            '20': 20,    // $20 per bill
+            '50': 50,    // $50 per bill
+            '100': 100   // $100 per bill
         };
         const DENOMINATION_ORDER = ['N', 'D', 'Q', '1', '5', '10', '20', '50', '100'];
         const CHANGE_ORDER_TYPES = ['N', 'D', 'Q', '1', '5'];
@@ -132,16 +149,48 @@
                 inputWrap.appendChild(dollar);
                 inputWrap.appendChild(input);
 
+                const countWrap = document.createElement('div');
+                countWrap.className = 'denom-count-wrap';
+
+                const countLabel = document.createElement('span');
+                countLabel.className = 'denom-count-label';
+                countLabel.textContent = key.length === 1 && key !== '1' && key !== '5' ? 'R' : '#';
+
+                const countInput = document.createElement('input');
+                countInput.className = 'denom-count';
+                countInput.type = 'number';
+                countInput.min = '0';
+                countInput.step = '1';
+                countInput.dataset.type = key;
+                countInput.value = Math.round(state[key] / DENOMINATION_VALUES[key]);
+
+                countWrap.appendChild(countLabel);
+                countWrap.appendChild(countInput);
+
                 const plusBtn = document.createElement('button');
                 plusBtn.className = 'denom-btn plus-btn';
                 plusBtn.dataset.type = key;
                 plusBtn.textContent = '+';
 
+                controls.appendChild(countWrap);
                 controls.appendChild(minusBtn);
                 controls.appendChild(inputWrap);
                 controls.appendChild(plusBtn);
                 item.appendChild(label);
                 item.appendChild(controls);
+                
+                const warning = document.createElement('div');
+                warning.className = 'denom-warning';
+                warning.dataset.type = key;
+                warning.textContent = '⚠';
+                warning.style.display = 'none';
+                item.appendChild(warning);
+                
+                const change = document.createElement('div');
+                change.className = 'denom-change';
+                change.dataset.type = key;
+                item.appendChild(change);
+                
                 grid.appendChild(item);
             }
         }
@@ -175,6 +224,17 @@
                 });
                 input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
             });
+            document.querySelectorAll('.denom-count').forEach(input => {
+                input.addEventListener('focus', () => input.select());
+                input.addEventListener('change', (e) => {
+                    const type = e.target.dataset.type;
+                    const count = parseInt(e.target.value, 10);
+                    state[type] = (isNaN(count) || count < 0 ? 0 : count) * DENOMINATION_VALUES[type];
+                    saveState();
+                    updateAllCalculations();
+                });
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+            });
             document.getElementById('copyBtn').addEventListener('click', copyChangeOrder);
             document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
         }
@@ -193,7 +253,31 @@
         function updateDenominationDisplays() {
             for (const key in DEFAULTS) {
                 const input = document.querySelector('.denom-value[data-type="' + key + '"]');
+                const countInput = document.querySelector('.denom-count[data-type="' + key + '"]');
+                const warning = document.querySelector('.denom-warning[data-type="' + key + '"]');
+                const change = document.querySelector('.denom-change[data-type="' + key + '"]');
+                
                 if (input && document.activeElement !== input) input.value = state[key];
+                if (countInput && document.activeElement !== countInput) {
+                    const count = Math.round(state[key] / DENOMINATION_VALUES[key]);
+                    countInput.value = count;
+                }
+                if (warning) {
+                    const isIllegal = state[key] > 0 && state[key] % DENOMINATION_VALUES[key] !== 0;
+                    warning.style.display = isIllegal ? 'block' : 'none';
+                }
+                if (change) {
+                    const diff = state[key] - DEFAULTS[key].value;
+                    if (diff > 0) {
+                        change.textContent = '+$' + diff;
+                        change.style.color = '#5cb85c';
+                    } else if (diff < 0) {
+                        change.textContent = '−$' + Math.abs(diff);
+                        change.style.color = '#d9534f';
+                    } else {
+                        change.textContent = '';
+                    }
+                }
             }
         }
 
