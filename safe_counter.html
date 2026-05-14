@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Counter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 10px; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .header h1 { font-size: 20px; margin-bottom: 5px; }
+        .safe-total-box { background: #fff; border: 2px solid #333; padding: 12px; margin-bottom: 15px; text-align: center; }
+        .safe-total-label { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+        .safe-total-amount { font-size: 28px; font-weight: bold; font-variant-numeric: tabular-nums; }
+        .denominations { margin-bottom: 15px; }
+        .denom-item { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .denom-label { font-size: 14px; font-weight: bold; min-width: 80px; }
+        .denom-controls { display: flex; align-items: center; gap: 8px; }
+        .denom-btn { background: #fff; border: 1px solid #333; width: 28px; height: 28px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .denom-btn:active { background: #ddd; }
+        .denom-input-wrap { display: flex; align-items: center; border: 1px solid #999; background: #fff; padding: 2px 6px; width: 72px; }
+        .denom-dollar { font-size: 14px; font-weight: bold; color: #333; margin-right: 2px; user-select: none; }
+        .denom-value { width: 100%; border: none; outline: none; font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; }
+        .denom-value::-webkit-outer-spin-button, .denom-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .change-order-section { margin-top: 15px; }
+        .section-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+        .change-order-box { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 13px; }
+        .co-line { display: flex; justify-content: space-between; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .co-divider { height: 1px; background: #ddd; margin: 6px 0; }
+        .copy-btn { width: 100%; background: #333; color: #fff; padding: 10px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+        .copy-btn:active { background: #555; }
+        .copy-feedback { text-align: center; font-size: 12px; margin-bottom: 8px; min-height: 16px; opacity: 0; }
+        .copy-feedback.show { opacity: 1; }
+        .reset-btn { width: 100%; background: #f0f0f0; color: #333; padding: 10px; border: 1px solid #999; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .reset-btn:active { background: #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Safe Counter</h1>
+            <p>Morning Safe Total: $1,200</p>
+        </div>
+        <div class="safe-total-box">
+            <div class="safe-total-label">Safe Total</div>
+            <div class="safe-total-amount" id="safeTotal">$0</div>
+        </div>
+        <div class="denominations" id="denominationsGrid"></div>
+        <div class="change-order-section">
+            <h2 class="section-title">Change Order</h2>
+            <div class="change-order-box">
+                <div class="co-line"><span class="co-label">CO:</span></div>
+                <div class="co-line"><span class="co-label">N</span><span class="co-value" id="coN">$0</span></div>
+                <div class="co-line"><span class="co-label">D</span><span class="co-value" id="coD">$0</span></div>
+                <div class="co-line"><span class="co-label">Q</span><span class="co-value" id="coQ">$0</span></div>
+                <div class="co-line"><span class="co-label">1</span><span class="co-value" id="co1">$0</span></div>
+                <div class="co-line"><span class="co-label">5</span><span class="co-value" id="co5">$0</span></div>
+                <div class="co-divider"></div>
+                <div class="co-line"><span class="co-label">Total</span><span class="co-total" id="coTotal">$0</span></div>
+                <div class="co-line"><span class="co-label">AM Total</span><span class="co-amtotal" id="coAMTotal">$1,200</span></div>
+            </div>
+            <button class="copy-btn" id="copyBtn">📋 Copy Change Order</button>
+            <div class="copy-feedback" id="copyFeedback">Copied to clipboard!</div>
+            <button class="reset-btn" id="resetBtn">Reset to Defaults</button>
+        </div>
+    </div>
+    <script>
+        const DEFAULTS = {
+            'N': { value: 40, increment: 2 },
+            'D': { value: 60, increment: 5 },
+            'Q': { value: 200, increment: 10 },
+            '1': { value: 400, increment: 1 },
+            '5': { value: 500, increment: 5 },
+            '10': { value: 0, increment: 10 },
+            '20': { value: 0, increment: 20 },
+            '50': { value: 0, increment: 50 },
+            '100': { value: 0, increment: 100 }
+        };
+        const DENOMINATION_ORDER = ['N', 'D', 'Q', '1', '5', '10', '20', '50', '100'];
+        const CHANGE_ORDER_TYPES = ['N', 'D', 'Q', '1', '5'];
+        const MORNING_TOTAL = 1200;
+        const state = {};
+
+        const savedState = localStorage.getItem('safeCounterState');
+        if (savedState) {
+            try {
+                const parsed = JSON.parse(savedState);
+                for (const key in DEFAULTS) state[key] = parsed[key] !== undefined ? parsed[key] : DEFAULTS[key].value;
+            } catch (e) {
+                for (const key in DEFAULTS) state[key] = DEFAULTS[key].value;
+            }
+        } else {
+            for (const key in DEFAULTS) state[key] = DEFAULTS[key].value;
+        }
+
+        function saveState() { localStorage.setItem('safeCounterState', JSON.stringify(state)); }
+
+        function renderDenominations() {
+            const grid = document.getElementById('denominationsGrid');
+            grid.innerHTML = '';
+            for (const key of DENOMINATION_ORDER) {
+                const item = document.createElement('div');
+                item.className = 'denom-item';
+
+                const label = document.createElement('div');
+                label.className = 'denom-label';
+                label.textContent = key;
+
+                const controls = document.createElement('div');
+                controls.className = 'denom-controls';
+
+                const minusBtn = document.createElement('button');
+                minusBtn.className = 'denom-btn minus-btn';
+                minusBtn.dataset.type = key;
+                minusBtn.textContent = '−';
+
+                const inputWrap = document.createElement('div');
+                inputWrap.className = 'denom-input-wrap';
+
+                const dollar = document.createElement('span');
+                dollar.className = 'denom-dollar';
+                dollar.textContent = '$';
+
+                const input = document.createElement('input');
+                input.className = 'denom-value';
+                input.type = 'number';
+                input.min = '0';
+                input.dataset.type = key;
+                input.value = state[key];
+
+                inputWrap.appendChild(dollar);
+                inputWrap.appendChild(input);
+
+                const plusBtn = document.createElement('button');
+                plusBtn.className = 'denom-btn plus-btn';
+                plusBtn.dataset.type = key;
+                plusBtn.textContent = '+';
+
+                controls.appendChild(minusBtn);
+                controls.appendChild(inputWrap);
+                controls.appendChild(plusBtn);
+                item.appendChild(label);
+                item.appendChild(controls);
+                grid.appendChild(item);
+            }
+        }
+
+        function attachEventListeners() {
+            document.querySelectorAll('.plus-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = e.target.dataset.type;
+                    state[type] += DEFAULTS[type].increment;
+                    saveState();
+                    updateAllCalculations();
+                });
+            });
+            document.querySelectorAll('.minus-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = e.target.dataset.type;
+                    state[type] = Math.max(0, state[type] - DEFAULTS[type].increment);
+                    saveState();
+                    updateAllCalculations();
+                });
+            });
+            document.querySelectorAll('.denom-value').forEach(input => {
+                input.addEventListener('focus', () => input.select());
+                input.addEventListener('change', (e) => {
+                    const type = e.target.dataset.type;
+                    const val = parseInt(e.target.value, 10);
+                    state[type] = isNaN(val) || val < 0 ? 0 : val;
+                    e.target.value = state[type];
+                    saveState();
+                    updateAllCalculations();
+                });
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+            });
+            document.getElementById('copyBtn').addEventListener('click', copyChangeOrder);
+            document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
+        }
+
+        function updateAllCalculations() {
+            updateSafeTotal();
+            updateChangeOrder();
+            updateDenominationDisplays();
+        }
+
+        function updateSafeTotal() {
+            const total = Object.values(state).reduce((sum, val) => sum + val, 0);
+            document.getElementById('safeTotal').textContent = '$' + total.toLocaleString();
+        }
+
+        function updateDenominationDisplays() {
+            for (const key in DEFAULTS) {
+                const input = document.querySelector('.denom-value[data-type="' + key + '"]');
+                if (input && document.activeElement !== input) input.value = state[key];
+            }
+        }
+
+        function updateChangeOrder() {
+            const co = {};
+            let coTotal = 0;
+            for (const type of CHANGE_ORDER_TYPES) {
+                const needed = Math.max(0, DEFAULTS[type].value - state[type]);
+                co[type] = needed;
+                coTotal += needed;
+            }
+            document.getElementById('coN').textContent = '$' + co.N;
+            document.getElementById('coD').textContent = '$' + co.D;
+            document.getElementById('coQ').textContent = '$' + co.Q;
+            document.getElementById('co1').textContent = '$' + co['1'];
+            document.getElementById('co5').textContent = '$' + co['5'];
+            document.getElementById('coTotal').textContent = '$' + coTotal;
+            const amTotal = MORNING_TOTAL - coTotal;
+            document.getElementById('coAMTotal').textContent = '$' + amTotal.toLocaleString();
+        }
+
+        function fallbackCopy(text, callback) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); callback(); } catch (e) {}
+            document.body.removeChild(ta);
+        }
+
+        function copyChangeOrder() {
+            const co = {};
+            let coTotal = 0;
+            for (const type of CHANGE_ORDER_TYPES) {
+                const needed = Math.max(0, DEFAULTS[type].value - state[type]);
+                co[type] = needed;
+                coTotal += needed;
+            }
+            const amTotal = MORNING_TOTAL - coTotal;
+            const text = [
+                'CO:',
+                'N - $' + co.N,
+                'D - $' + co.D,
+                'Q - $' + co.Q,
+                '1 - $' + co['1'],
+                '5 - $' + co['5'],
+                'Total: $' + coTotal.toLocaleString(),
+                'AM Total: $' + amTotal.toLocaleString()
+            ].join('\n');
+
+            const showFeedback = () => {
+                const feedback = document.getElementById('copyFeedback');
+                feedback.classList.add('show');
+                setTimeout(() => feedback.classList.remove('show'), 2000);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(showFeedback).catch(() => fallbackCopy(text, showFeedback));
+            } else {
+                fallbackCopy(text, showFeedback);
+            }
+        }
+
+        function resetToDefaults() {
+            for (const key in DEFAULTS) state[key] = DEFAULTS[key].value;
+            saveState();
+            updateAllCalculations();
+        }
+
+        renderDenominations();
+        attachEventListeners();
+        updateAllCalculations();
+    </script>
+</body>
+</html>
