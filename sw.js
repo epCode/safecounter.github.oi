@@ -2,7 +2,7 @@ const CACHE_NAME = 'safe-counter-v1';
 const BASE_PATH = '/safecounter.github.oi';
 const urlsToCache = [
   BASE_PATH + '/',
-  BASE_PATH + '/safe_counter.html',
+  BASE_PATH + '/index.html',
   BASE_PATH + '/manifest.json'
 ];
 
@@ -57,7 +57,7 @@ self.addEventListener('fetch', event => {
           return response;
         }).catch(() => {
           // Return offline fallback if available
-          return caches.match(BASE_PATH + '/safe_counter.html');
+          return caches.match(BASE_PATH + '/index.html');
         });
       })
   );

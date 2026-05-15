@@ -2,7 +2,7 @@
   "name": "Safe Counter",
   "short_name": "Safe Counter",
   "description": "Track and manage your safe's cash denominations with real-time calculations",
-  "start_url": "/safecounter.github.oi/safe_counter.html",
+  "start_url": "/safecounter.github.oi/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#333333",
