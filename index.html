@@ -10,6 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="Safe Counter">
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="icon" type="image/png" href="./icon.png" sizes="512x512">
+    <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
     <title>Safe Counter</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,6 +19,7 @@
         .container { max-width: 400px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 15px; }
         .header h1 { font-size: 20px; margin-bottom: 5px; }
+        .header-icon { width: 64px; height: 64px; margin-bottom: 10px; border-radius: 12px; }
         .safe-total-box { background: #fff; border: 2px solid #333; padding: 12px; margin-bottom: 15px; text-align: center; }
         .safe-total-label { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
         .safe-total-amount { font-size: 28px; font-weight: bold; font-variant-numeric: tabular-nums; }
@@ -66,6 +69,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <img src="./icon-192.png" alt="Safe Counter" class="header-icon">
             <h1>Safe Counter</h1>
             <p>Morning Safe Total: $1,200</p>
         </div>
