@@ -15,7 +15,7 @@
         .safe-total-amount { font-size: 28px; font-weight: bold; font-variant-numeric: tabular-nums; }
         .denominations { margin-bottom: 15px; }
         .denom-item { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .denom-label { font-size: 14px; font-weight: bold; min-width: 80px; }
+        .denom-label { font-size: 14px; font-weight: bold; cursor: pointer; user-select: none; width: fit-content; }
         .denom-controls { display: flex; align-items: center; gap: 8px; }
         .denom-btn { background: #fff; border: 1px solid #333; width: 28px; height: 28px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .denom-btn:active { background: #ddd; }
@@ -27,7 +27,10 @@
         .denom-count { width: 100%; border: none; outline: none; font-size: 12px; font-weight: normal; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; color: #777; }
         .denom-count::-webkit-outer-spin-button, .denom-count::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .denom-count-label { font-size: 11px; color: #999; margin-right: 1px; user-select: none; }
-        .denom-warning { font-size: 12px; color: #d9534f; margin-left: 4px; user-select: none; }
+        .denom-warning { font-size: 11px; color: #aaa; margin-left: 4px; user-select: none; cursor: help; position: relative; }
+        .denom-tooltip { display: none; position: absolute; background: #999; color: white; padding: 5px 7px; border-radius: 3px; font-size: 10px; white-space: nowrap; z-index: 1000; bottom: 125%; left: 50%; transform: translateX(-50%); pointer-events: none; }
+        .denom-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: #999; }
+        .denom-warning.show-tooltip .denom-tooltip { display: block; }
         .denom-change { font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; margin-left: 8px; }
         .change-order-section { margin-top: 15px; }
         .section-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
@@ -40,6 +43,17 @@
         .copy-feedback.show { opacity: 1; }
         .reset-btn { width: 100%; background: #f0f0f0; color: #333; padding: 10px; border: 1px solid #999; font-size: 12px; font-weight: bold; cursor: pointer; }
         .reset-btn:active { background: #ddd; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1001; }
+        .custom-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 2px solid #333; padding: 20px; border-radius: 4px; z-index: 1002; min-width: 300px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .modal-title { font-size: 14px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .modal-input-row { margin-bottom: 15px; }
+        .modal-input { width: 100%; padding: 8px; border: 1px solid #999; font-size: 14px; box-sizing: border-box; font-weight: bold; }
+        .modal-input:focus { outline: none; border-color: #333; }
+        .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+        .modal-btn { padding: 8px 16px; border: 1px solid #999; background: #fff; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .modal-btn:active { background: #ddd; }
+        .modal-btn-ok { background: #333; color: #fff; border-color: #333; }
+        .modal-btn-ok:active { background: #555; }
     </style>
 </head>
 <body>
@@ -69,10 +83,26 @@
             <button class="copy-btn" id="copyBtn">📋 Copy Change Order</button>
             <div class="copy-feedback" id="copyFeedback">Copied to clipboard!</div>
             <button class="reset-btn" id="resetBtn">Reset to Defaults</button>
+            <button class="reset-btn" id="resetOriginalBtn" style="display: none;">Back to Regular Safe Defaults</button>
         </div>
     </div>
+    
+    <div id="modalOverlay" class="modal-overlay" style="display: none;"></div>
+    <div id="customModal" class="custom-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">Change Default</div>
+            <div class="modal-input-row">
+                <input type="number" id="modalInput" class="modal-input" min="0" placeholder="Enter amount">
+            </div>
+            <div class="modal-buttons">
+                <button id="modalCancelBtn" class="modal-btn modal-btn-cancel">Cancel</button>
+                <button id="modalOkBtn" class="modal-btn modal-btn-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const DEFAULTS = {
+        const ORIGINAL_DEFAULTS = {
             'N': { value: 40, increment: 2 },
             'D': { value: 60, increment: 5 },
             'Q': { value: 200, increment: 10 },
@@ -83,6 +113,7 @@
             '50': { value: 0, increment: 50 },
             '100': { value: 0, increment: 100 }
         };
+        let DEFAULTS = JSON.parse(JSON.stringify(ORIGINAL_DEFAULTS));
         const DENOMINATION_VALUES = {
             'N': 2,      // $2 per nickel roll
             'D': 5,      // $5 per dime roll
@@ -99,6 +130,19 @@
         const MORNING_TOTAL = 1200;
         const state = {};
 
+        // Load custom defaults if they exist
+        const savedDefaults = localStorage.getItem('safeCounterDefaults');
+        if (savedDefaults) {
+            try {
+                const parsed = JSON.parse(savedDefaults);
+                for (const key in DEFAULTS) {
+                    if (parsed[key] !== undefined) {
+                        DEFAULTS[key].value = parsed[key];
+                    }
+                }
+            } catch (e) {}
+        }
+
         const savedState = localStorage.getItem('safeCounterState');
         if (savedState) {
             try {
@@ -112,6 +156,24 @@
         }
 
         function saveState() { localStorage.setItem('safeCounterState', JSON.stringify(state)); }
+        
+        function saveDefaults() { 
+            const defaultsToSave = {};
+            for (const key in DEFAULTS) defaultsToSave[key] = DEFAULTS[key].value;
+            localStorage.setItem('safeCounterDefaults', JSON.stringify(defaultsToSave));
+            updateResetButtonVisibility();
+        }
+        
+        function updateResetButtonVisibility() {
+            let hasChanges = false;
+            for (const key in DEFAULTS) {
+                if (DEFAULTS[key].value !== ORIGINAL_DEFAULTS[key].value) {
+                    hasChanges = true;
+                    break;
+                }
+            }
+            document.getElementById('resetOriginalBtn').style.display = hasChanges ? 'block' : 'none';
+        }
 
         function renderDenominations() {
             const grid = document.getElementById('denominationsGrid');
@@ -123,6 +185,20 @@
                 const label = document.createElement('div');
                 label.className = 'denom-label';
                 label.textContent = key;
+                label.addEventListener('click', () => {
+                    const currentValue = DEFAULTS[key].value;
+                    showCustomModal(`Enter new default for ${key}:`, currentValue, (newValue) => {
+                        if (newValue !== null) {
+                            if (!isNaN(newValue) && newValue >= 0) {
+                                DEFAULTS[key].value = newValue;
+                                saveDefaults();
+                                updateAllCalculations();
+                            } else {
+                                alert('Please enter a valid number.');
+                            }
+                        }
+                    });
+                });
 
                 const controls = document.createElement('div');
                 controls.className = 'denom-controls';
@@ -184,6 +260,11 @@
                 warning.dataset.type = key;
                 warning.textContent = '⚠';
                 warning.style.display = 'none';
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'denom-tooltip';
+                warning.appendChild(tooltip);
+                
                 item.appendChild(warning);
                 
                 const change = document.createElement('div');
@@ -214,11 +295,10 @@
             });
             document.querySelectorAll('.denom-value').forEach(input => {
                 input.addEventListener('focus', () => input.select());
-                input.addEventListener('change', (e) => {
+                input.addEventListener('input', (e) => {
                     const type = e.target.dataset.type;
                     const val = parseInt(e.target.value, 10);
                     state[type] = isNaN(val) || val < 0 ? 0 : val;
-                    e.target.value = state[type];
                     saveState();
                     updateAllCalculations();
                 });
@@ -226,7 +306,7 @@
             });
             document.querySelectorAll('.denom-count').forEach(input => {
                 input.addEventListener('focus', () => input.select());
-                input.addEventListener('change', (e) => {
+                input.addEventListener('input', (e) => {
                     const type = e.target.dataset.type;
                     const count = parseInt(e.target.value, 10);
                     state[type] = (isNaN(count) || count < 0 ? 0 : count) * DENOMINATION_VALUES[type];
@@ -235,8 +315,20 @@
                 });
                 input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
             });
+            document.querySelectorAll('.denom-warning').forEach(warning => {
+                warning.addEventListener('click', () => {
+                    warning.classList.toggle('show-tooltip');
+                });
+                warning.addEventListener('mouseenter', () => {
+                    warning.classList.add('show-tooltip');
+                });
+                warning.addEventListener('mouseleave', () => {
+                    warning.classList.remove('show-tooltip');
+                });
+            });
             document.getElementById('copyBtn').addEventListener('click', copyChangeOrder);
             document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
+            document.getElementById('resetOriginalBtn').addEventListener('click', resetToOriginalDefaults);
         }
 
         function updateAllCalculations() {
@@ -255,6 +347,7 @@
                 const input = document.querySelector('.denom-value[data-type="' + key + '"]');
                 const countInput = document.querySelector('.denom-count[data-type="' + key + '"]');
                 const warning = document.querySelector('.denom-warning[data-type="' + key + '"]');
+                const tooltip = warning ? warning.querySelector('.denom-tooltip') : null;
                 const change = document.querySelector('.denom-change[data-type="' + key + '"]');
                 
                 if (input && document.activeElement !== input) input.value = state[key];
@@ -265,6 +358,9 @@
                 if (warning) {
                     const isIllegal = state[key] > 0 && state[key] % DENOMINATION_VALUES[key] !== 0;
                     warning.style.display = isIllegal ? 'block' : 'none';
+                    if (isIllegal && tooltip) {
+                        tooltip.textContent = 'Amount doesn\'t divide evenly';
+                    }
                 }
                 if (change) {
                     const diff = state[key] - DEFAULTS[key].value;
@@ -348,10 +444,69 @@
             saveState();
             updateAllCalculations();
         }
+        
+        function showCustomModal(title, currentValue, callback) {
+            document.getElementById('modalTitle').textContent = title;
+            const input = document.getElementById('modalInput');
+            input.value = currentValue;
+            
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById('customModal').style.display = 'block';
+            
+            input.focus();
+            input.select();
+            
+            const handleOk = () => {
+                const newValue = parseInt(input.value, 10);
+                cleanup();
+                callback(newValue);
+            };
+            
+            const handleCancel = () => {
+                cleanup();
+                callback(null);
+            };
+            
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') handleOk();
+                if (e.key === 'Escape') handleCancel();
+            };
+            
+            const cleanup = () => {
+                document.getElementById('modalOverlay').style.display = 'none';
+                document.getElementById('customModal').style.display = 'none';
+                document.getElementById('modalOkBtn').removeEventListener('click', handleOk);
+                document.getElementById('modalCancelBtn').removeEventListener('click', handleCancel);
+                input.removeEventListener('keydown', handleKeyDown);
+            };
+            
+            document.getElementById('modalOkBtn').addEventListener('click', handleOk);
+            document.getElementById('modalCancelBtn').addEventListener('click', handleCancel);
+            input.addEventListener('keydown', handleKeyDown);
+        }
+        
+        function resetToOriginalDefaults() {
+            for (const key in DEFAULTS) DEFAULTS[key].value = ORIGINAL_DEFAULTS[key].value;
+            saveDefaults();
+            for (const key in DEFAULTS) state[key] = DEFAULTS[key].value;
+            saveState();
+            renderDenominations();
+            attachEventListeners();
+            updateAllCalculations();
+        }
 
         renderDenominations();
         attachEventListeners();
         updateAllCalculations();
+        updateResetButtonVisibility();
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.denom-warning')) {
+                document.querySelectorAll('.denom-warning.show-tooltip').forEach(warning => {
+                    warning.classList.remove('show-tooltip');
+                });
+            }
+        });
     </script>
 </body>
 </html>
