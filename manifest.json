@@ -2,33 +2,33 @@
   "name": "Safe Counter",
   "short_name": "Safe Counter",
   "description": "Track and manage your safe's cash denominations with real-time calculations",
-  "start_url": "./safe_counter.html",
+  "start_url": "/safecounter.github.oi/safe_counter.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#333333",
   "orientation": "portrait-primary",
-  "scope": "./",
+  "scope": "/safecounter.github.oi/",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/safecounter.github.oi/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icon.png",
+      "src": "/safecounter.github.oi/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icon-192.png",
+      "src": "/safecounter.github.oi/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./icon.png",
+      "src": "/safecounter.github.oi/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

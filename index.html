@@ -8,10 +8,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Safe Counter">
-    <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon-192.png">
-    <link rel="icon" type="image/png" href="./icon.png" sizes="512x512">
-    <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
+    <link rel="manifest" href="/safecounter.github.oi/manifest.json">
+    <link rel="apple-touch-icon" href="/safecounter.github.oi/icon-192.png">
+    <link rel="icon" type="image/png" href="/safecounter.github.oi/icon.png" sizes="512x512">
+    <link rel="icon" type="image/png" href="/safecounter.github.oi/icon-192.png" sizes="192x192">
+    <link rel="shortcut icon" href="/safecounter.github.oi/icon-192.png">
     <title>Safe Counter</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -69,7 +70,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="./icon-192.png" alt="Safe Counter" class="header-icon">
+            <img src="/safecounter.github.oi/icon-192.png" alt="Safe Counter" class="header-icon">
             <h1>Safe Counter</h1>
             <p>Morning Safe Total: $1,200</p>
         </div>
@@ -521,7 +522,7 @@
         
         // Register service worker for PWA functionality
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(err => {
+            navigator.serviceWorker.register('/safecounter.github.oi/sw.js').catch(err => {
                 console.log('Service Worker registration failed:', err);
             });
         }
