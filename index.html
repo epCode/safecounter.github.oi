@@ -16,61 +16,127 @@
     <title>Safe Counter</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 10px; }
+
+        /* Light theme (default) */
+        :root {
+            --bg: #f5f5f5;
+            --surface: #ffffff;
+            --border: #ddd;
+            --border-strong: #333;
+            --text: #333;
+            --text-muted: #777;
+            --text-faint: #999;
+            --btn-bg: #ffffff;
+            --btn-active: #ddd;
+            --input-border: #999;
+            --input-border-light: #ccc;
+            --copy-btn-bg: #333;
+            --copy-btn-active: #555;
+            --reset-btn-bg: #f0f0f0;
+            --co-divider: #ddd;
+            --toggle-bg: rgba(0,0,0,0.07);
+            --toggle-hover: rgba(0,0,0,0.13);
+            --toggle-color: #555;
+        }
+
+        /* Dark theme */
+        body.dark {
+            --bg: #1a1a1a;
+            --surface: #252525;
+            --border: #3a3a3a;
+            --border-strong: #888;
+            --text: #e0e0e0;
+            --text-muted: #999;
+            --text-faint: #666;
+            --btn-bg: #2e2e2e;
+            --btn-active: #444;
+            --input-border: #555;
+            --input-border-light: #444;
+            --copy-btn-bg: #444;
+            --copy-btn-active: #555;
+            --reset-btn-bg: #2e2e2e;
+            --co-divider: #3a3a3a;
+            --toggle-bg: rgba(255,255,255,0.08);
+            --toggle-hover: rgba(255,255,255,0.15);
+            --toggle-color: #aaa;
+        }
+
+        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); padding: 10px; transition: background 0.2s, color 0.2s; }
         .container { max-width: 400px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 15px; }
+
+        /* Header with theme toggle */
+        .header { text-align: center; margin-bottom: 15px; position: relative; }
         .header h1 { font-size: 20px; margin-bottom: 5px; }
-        .header-icon { width: 64px; height: 64px; margin-bottom: 10px; border-radius: 12px; }
-        .safe-total-box { background: #fff; border: 2px solid #333; padding: 12px; margin-bottom: 15px; text-align: center; }
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--toggle-bg);
+            border: none;
+            color: var(--toggle-color);
+            font-size: 15px;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            line-height: 1;
+        }
+        .theme-toggle:hover { background: var(--toggle-hover); }
+
+        .safe-total-box { background: var(--surface); border: 2px solid var(--border-strong); padding: 12px; margin-bottom: 15px; text-align: center; border-radius: 5px; }
         .safe-total-label { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
         .safe-total-amount { font-size: 28px; font-weight: bold; font-variant-numeric: tabular-nums; }
         .denominations { margin-bottom: 15px; }
-        .denom-item { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .denom-item { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; }
         .denom-label { font-size: 14px; font-weight: bold; cursor: pointer; user-select: none; width: fit-content; }
         .denom-controls { display: flex; align-items: center; gap: 8px; }
-        .denom-btn { background: #fff; border: 1px solid #333; width: 28px; height: 28px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .denom-btn:active { background: #ddd; }
-        .denom-input-wrap { display: flex; align-items: center; border: 1px solid #999; background: #fff; padding: 2px 6px; width: 72px; }
-        .denom-count-wrap { display: flex; align-items: center; border: 1px solid #ccc; background: #fff; padding: 2px 3px; width: 45px; }
-        .denom-dollar { font-size: 14px; font-weight: bold; color: #333; margin-right: 2px; user-select: none; }
-        .denom-value { width: 100%; border: none; outline: none; font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; }
+        .denom-btn { background: var(--btn-bg); border: 1px solid var(--border-strong); color: var(--text); width: 28px; height: 28px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 4px; }
+        .denom-btn:active { background: var(--btn-active); }
+        .denom-input-wrap { display: flex; align-items: center; border: 1px solid var(--input-border); background: var(--surface); padding: 2px 6px; width: 72px; border-radius: 4px; }
+        .denom-count-wrap { display: flex; align-items: center; border: 1px solid var(--input-border-light); background: var(--surface); padding: 2px 3px; width: 45px; border-radius: 4px; }
+        .denom-dollar { font-size: 14px; font-weight: bold; color: var(--text); margin-right: 2px; user-select: none; }
+        .denom-value { width: 100%; border: none; outline: none; font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; text-align: right; background: transparent; color: var(--text); -moz-appearance: textfield; }
         .denom-value::-webkit-outer-spin-button, .denom-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .denom-count { width: 100%; border: none; outline: none; font-size: 12px; font-weight: normal; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; color: #777; }
+        .denom-count { width: 100%; border: none; outline: none; font-size: 12px; font-weight: normal; font-variant-numeric: tabular-nums; text-align: right; background: transparent; -moz-appearance: textfield; color: var(--text-muted); }
         .denom-count::-webkit-outer-spin-button, .denom-count::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .denom-count-label { font-size: 11px; color: #999; margin-right: 1px; user-select: none; }
-        .denom-warning { font-size: 11px; color: #aaa; margin-left: 4px; user-select: none; cursor: help; position: relative; }
-        .denom-tooltip { display: none; position: absolute; background: #999; color: white; padding: 5px 7px; border-radius: 3px; font-size: 10px; white-space: nowrap; z-index: 1000; bottom: 125%; left: 50%; transform: translateX(-50%); pointer-events: none; }
-        .denom-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: #999; }
+        .denom-count-label { font-size: 11px; color: var(--text-faint); margin-right: 1px; user-select: none; }
+        .denom-warning { font-size: 11px; color: var(--text-faint); margin-left: 4px; user-select: none; cursor: help; position: relative; }
+        .denom-tooltip { display: none; position: absolute; background: #666; color: white; padding: 5px 7px; border-radius: 4px; font-size: 10px; white-space: nowrap; z-index: 1000; bottom: 125%; left: 50%; transform: translateX(-50%); pointer-events: none; }
+        .denom-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: #666; }
         .denom-warning.show-tooltip .denom-tooltip { display: block; }
         .denom-change { font-size: 14px; font-weight: bold; font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; margin-left: 8px; }
         .change-order-section { margin-top: 15px; }
         .section-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
-        .change-order-box { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 13px; }
+        .change-order-box { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 10px; font-size: 13px; border-radius: 5px; }
         .co-line { display: flex; justify-content: space-between; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-        .co-divider { height: 1px; background: #ddd; margin: 6px 0; }
-        .copy-btn { width: 100%; background: #333; color: #fff; padding: 10px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
-        .copy-btn:active { background: #555; }
+        .co-divider { height: 1px; background: var(--co-divider); margin: 6px 0; }
+        .copy-btn { width: 100%; background: var(--copy-btn-bg); color: #fff; padding: 10px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 8px; border-radius: 5px; }
+        .copy-btn:active { background: var(--copy-btn-active); }
         .copy-feedback { text-align: center; font-size: 12px; margin-bottom: 8px; min-height: 16px; opacity: 0; }
         .copy-feedback.show { opacity: 1; }
-        .reset-btn { width: 100%; background: #f0f0f0; color: #333; padding: 10px; border: 1px solid #999; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .reset-btn:active { background: #ddd; }
+        .reset-btn { width: 100%; background: var(--reset-btn-bg); color: var(--text); padding: 10px; border: 1px solid var(--input-border); font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        .reset-btn:active { background: var(--btn-active); }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1001; }
-        .custom-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 2px solid #333; padding: 20px; border-radius: 4px; z-index: 1002; min-width: 300px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .custom-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--surface); border: 2px solid var(--border-strong); padding: 20px; border-radius: 6px; z-index: 1002; min-width: 300px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
         .modal-title { font-size: 14px; font-weight: bold; margin-bottom: 15px; text-align: center; }
         .modal-input-row { margin-bottom: 15px; }
-        .modal-input { width: 100%; padding: 8px; border: 1px solid #999; font-size: 14px; box-sizing: border-box; font-weight: bold; }
-        .modal-input:focus { outline: none; border-color: #333; }
+        .modal-input { width: 100%; padding: 8px; border: 1px solid var(--input-border); background: var(--btn-bg); color: var(--text); font-size: 14px; box-sizing: border-box; font-weight: bold; border-radius: 4px; }
+        .modal-input:focus { outline: none; border-color: var(--border-strong); }
         .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; }
-        .modal-btn { padding: 8px 16px; border: 1px solid #999; background: #fff; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .modal-btn:active { background: #ddd; }
-        .modal-btn-ok { background: #333; color: #fff; border-color: #333; }
-        .modal-btn-ok:active { background: #555; }
+        .modal-btn { padding: 8px 16px; border: 1px solid var(--input-border); background: var(--btn-bg); color: var(--text); cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 4px; }
+        .modal-btn:active { background: var(--btn-active); }
+        .modal-btn-ok { background: var(--copy-btn-bg); color: #fff; border-color: var(--copy-btn-bg); }
+        .modal-btn-ok:active { background: var(--copy-btn-active); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <img src="/safecounter.github.oi/icon-192.png" alt="Safe Counter" class="header-icon">
+            <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
             <h1>Safe Counter</h1>
             <p>Morning Safe Total: $1,200</p>
         </div>
@@ -95,7 +161,7 @@
             <button class="copy-btn" id="copyBtn">📋 Copy Change Order</button>
             <div class="copy-feedback" id="copyFeedback">Copied to clipboard!</div>
             <button class="reset-btn" id="resetBtn">Reset to Defaults</button>
-            <button class="reset-btn" id="resetOriginalBtn" style="display: none;">Back to Regular Safe Defaults</button>
+            <button class="reset-btn" id="resetOriginalBtn" style="display: none; margin-top: 8px;">Back to Regular Safe Defaults</button>
         </div>
     </div>
     
@@ -520,6 +586,19 @@
             }
         });
         
+        // Dark mode toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('safeCounterTheme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark');
+            themeToggle.textContent = '☀️';
+        }
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark');
+            themeToggle.textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('safeCounterTheme', isDark ? 'dark' : 'light');
+        });
+
         // Register service worker for PWA functionality
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/safecounter.github.oi/sw.js').catch(err => {
