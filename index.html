@@ -61,8 +61,47 @@
             --toggle-color: #aaa;
         }
 
-        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); padding: 10px; transition: background 0.2s, color 0.2s; }
-        .container { max-width: 400px; margin: 0 auto; }
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 0;
+            min-height: 100vh;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        /* Chick-fil-A themed page background — subtle */
+        .cfa-bg {
+            min-height: 100vh;
+            background-color: #f0e8e8;
+            padding: 16px 10px 24px;
+        }
+        body.dark .cfa-bg {
+            background-color: #221818;
+        }
+
+        /* Branded top banner */
+        .cfa-banner {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .cfa-wordmark {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 11px;
+            font-style: italic;
+            color: #b05050;
+            letter-spacing: 0.02em;
+        }
+        body.dark .cfa-wordmark { color: #9a5555; }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 12px 10px 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        }
 
         /* Header with theme toggle */
         .header { text-align: center; margin-bottom: 15px; position: relative; }
@@ -219,6 +258,10 @@
     </style>
 </head>
 <body>
+    <div class="cfa-bg">
+        <div class="cfa-banner">
+            <div class="cfa-wordmark">Chick-fil-A</div>
+        </div>
     <div class="container">
         <div class="header">
             <button class="help-btn" id="helpBtn" title="How to use">?</button>
@@ -862,6 +905,8 @@
         function tutStart() {
             tutActive = true;
             tutStep = 0;
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
             scrim.classList.add('active');
             spotlight.classList.add('active');
             popover.classList.add('active');
@@ -871,6 +916,8 @@
         function tutEnd() {
             tutHideFakeChange();
             tutActive = false;
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
             scrim.classList.remove('active');
             spotlight.classList.remove('active');
             popover.classList.remove('active');
@@ -934,5 +981,6 @@
             });
         }
     </script>
+    </div>
 </body>
 </html>
