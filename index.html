@@ -903,10 +903,34 @@
             localStorage.setItem('safeCounterTheme', isDark ? 'dark' : 'light');
         });
 
-        // Register service worker for PWA functionality
+        // Register service worker and auto-reload when a new version activates
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/safecounter.github.oi/sw.js').catch(err => {
-                console.log('Service Worker registration failed:', err);
+            navigator.serviceWorker.register('/safecounter.github.oi/sw.js')
+                .then(reg => {
+                    // Check for an update every time the page loads
+                    reg.update();
+
+                    // If a new SW is already waiting when we load, activate it now
+                    if (reg.waiting) {
+                        reg.waiting.postMessage('skipWaiting');
+                    }
+
+                    // When a new SW finishes installing and moves to "waiting", activate it
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage('skipWaiting');
+                            }
+                        });
+                    });
+                })
+                .catch(err => console.log('Service Worker registration failed:', err));
+
+            // Reload once the new SW takes control
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) { refreshing = true; location.reload(); }
             });
         }
     </script>
