@@ -131,11 +131,97 @@
         .modal-btn:active { background: var(--btn-active); }
         .modal-btn-ok { background: var(--copy-btn-bg); color: #fff; border-color: var(--copy-btn-bg); }
         .modal-btn-ok:active { background: var(--copy-btn-active); }
+
+        /* ── Tutorial ── */
+        .help-btn {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--toggle-bg);
+            border: none;
+            color: var(--toggle-color);
+            font-size: 14px;
+            font-weight: bold;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            font-family: Georgia, serif;
+        }
+        .help-btn:hover { background: var(--toggle-hover); }
+
+        #tutorialSpotlight {
+            position: fixed;
+            z-index: 2001;
+            border-radius: 7px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+            transition: top 0.4s cubic-bezier(.4,0,.2,1),
+                        left 0.4s cubic-bezier(.4,0,.2,1),
+                        width 0.4s cubic-bezier(.4,0,.2,1),
+                        height 0.4s cubic-bezier(.4,0,.2,1),
+                        opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #tutorialSpotlight.active { opacity: 1; }
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #tutorialScrim.active { opacity: 1; }
+
+        #tutorialPopover {
+            position: fixed;
+            z-index: 2002;
+            background: var(--surface);
+            border: 1.5px solid var(--border-strong);
+            border-radius: 8px;
+            padding: 14px 16px 12px;
+            max-width: 260px;
+            min-width: 200px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            pointer-events: none;
+        }
+        #tutorialPopover.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        #tutorialPopover.transitioning { opacity: 0; transform: translateY(6px); }
+
+        .tut-step-count { font-size: 10px; color: var(--text-faint); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+        .tut-title { font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text); }
+        .tut-body { font-size: 12px; line-height: 1.55; color: var(--text-muted); margin-bottom: 12px; }
+        .tut-nav { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+        .tut-btn {
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid var(--input-border);
+            background: var(--btn-bg);
+            color: var(--text);
+            transition: background 0.12s;
+        }
+        .tut-btn:hover { background: var(--btn-active); }
+        .tut-btn-primary { background: var(--copy-btn-bg); color: #fff; border-color: var(--copy-btn-bg); }
+        .tut-btn-primary:hover { opacity: 0.85; }
+        .tut-progress { display: flex; gap: 4px; align-items: center; flex: 1; }
+        .tut-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
+        .tut-dot.active { background: var(--text); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <button class="help-btn" id="helpBtn" title="How to use">?</button>
             <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
             <h1>Safe Counter</h1>
             <p>Morning Safe Total: $1,200</p>
@@ -165,6 +251,19 @@
         </div>
     </div>
     
+    <div id="tutorialScrim"></div>
+    <div id="tutorialSpotlight"></div>
+    <div id="tutorialPopover">
+        <div class="tut-step-count" id="tutStepCount"></div>
+        <div class="tut-title" id="tutTitle"></div>
+        <div class="tut-body" id="tutBody"></div>
+        <div class="tut-nav">
+            <div class="tut-progress" id="tutProgress"></div>
+            <button class="tut-btn" id="tutSkipBtn">Skip Tutorial</button>
+            <button class="tut-btn tut-btn-primary" id="tutNextBtn">Next</button>
+        </div>
+    </div>
+
     <div id="modalOverlay" class="modal-overlay" style="display: none;"></div>
     <div id="customModal" class="custom-modal" style="display: none;">
         <div class="modal-content">
@@ -586,6 +685,211 @@
             }
         });
         
+        // ── Tutorial ──
+        const TUTORIAL_STEPS = [
+            {
+                target: () => document.querySelector('.safe-total-box'),
+                title: 'Safe Total',
+                body: 'This always shows the live running total of everything counted so far across all denominations.'
+            },
+            {
+                target: () => document.querySelector('.denom-item'),
+                title: 'Denomination Rows',
+                body: 'Each row is one denomination — coin rolls (N, D, Q) and bills ($1–$100). Enter the dollar value currently in the safe for that type.'
+            },
+            {
+                target: () => document.querySelector('.denom-input-wrap'),
+                title: 'Dollar Amount',
+                body: 'Type a dollar amount directly, or use the − and + buttons to step up/down by the preset increment for that denomination.'
+            },
+            {
+                target: () => document.querySelector('.denom-count-wrap'),
+                title: 'Count / Roll Field',
+                body: 'The small field on the left shows the number of rolls or bills. You can type here instead — it automatically converts to a dollar amount.'
+            },
+            {
+                target: () => { const btns = document.querySelectorAll('.denom-btn'); return btns[0]; },
+                title: '− / + Buttons',
+                body: 'Tap − or + to decrease or increase the amount by the denomination\'s preset step (e.g. $10 per quarter roll, $20 per $20 bill).'
+            },
+            {
+                target: () => document.querySelector('.denom-label'),
+                title: 'Change the Default',
+                body: 'Tap the denomination label (like "Q" or "20") to set a new default target amount for that row. This persists between sessions.'
+            },
+            {
+                target: () => document.querySelector('.denom-change'),
+                title: 'Over / Under Indicator',
+                body: 'Green +$ means you\'re over the default; red −$ means under. No number means you\'re right on target.'
+            },
+            {
+                target: () => document.querySelector('.change-order-box'),
+                title: 'Change Order',
+                body: 'Auto-calculated from your defaults. Shows how much of each denomination to order so the safe is fully stocked, plus the resulting morning total.'
+            },
+            {
+                target: () => document.getElementById('copyBtn'),
+                title: 'Copy Change Order',
+                body: 'Copies the change order as plain text to your clipboard — ready to paste into a message or email.'
+            },
+            {
+                target: () => document.getElementById('resetBtn'),
+                title: 'Reset',
+                body: '"Reset to Defaults" restores all amounts to their saved targets. If you\'ve changed the defaults, a second button appears to restore the original factory defaults.'
+            },
+            {
+                target: () => document.getElementById('themeToggle'),
+                title: 'Dark Mode',
+                body: 'Toggle between light and dark theme. Your preference is remembered automatically.'
+            }
+        ];
+
+        let tutStep = 0;
+        let tutActive = false;
+        const scrim = document.getElementById('tutorialScrim');
+        const spotlight = document.getElementById('tutorialSpotlight');
+        const popover = document.getElementById('tutorialPopover');
+        const tutTitle = document.getElementById('tutTitle');
+        const tutBody = document.getElementById('tutBody');
+        const tutStepCount = document.getElementById('tutStepCount');
+        const tutProgress = document.getElementById('tutProgress');
+        const tutNextBtn = document.getElementById('tutNextBtn');
+        const tutSkipBtn = document.getElementById('tutSkipBtn');
+
+        // Index of the "over/under indicator" step
+        const TUT_CHANGE_STEP = 6;
+        let tutFakeChangeEl = null;
+        let tutFakeChangeOrigText = '';
+        let tutFakeChangeOrigColor = '';
+
+        function tutShowFakeChange() {
+            tutFakeChangeEl = document.querySelector('.denom-change');
+            if (!tutFakeChangeEl) return;
+            tutFakeChangeOrigText  = tutFakeChangeEl.textContent;
+            tutFakeChangeOrigColor = tutFakeChangeEl.style.color;
+            tutFakeChangeEl.textContent = '+$20';
+            tutFakeChangeEl.style.color = '#5cb85c';
+        }
+
+        function tutHideFakeChange() {
+            if (!tutFakeChangeEl) return;
+            tutFakeChangeEl.textContent = tutFakeChangeOrigText;
+            tutFakeChangeEl.style.color = tutFakeChangeOrigColor;
+            tutFakeChangeEl = null;
+        }
+
+        // Scroll element into view (instant, not smooth) then read its fixed-position rect
+        function tutScrollAndGetRect(el) {
+            if (!el) return null;
+            el.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+            const r = el.getBoundingClientRect();
+            const pad = 6;
+            return { top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 };
+        }
+
+        function tutPositionPopover(rect) {
+            const pw = 268, ph = 160;
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const margin = 12;
+            let top, left;
+
+            if (rect) {
+                if (rect.top + rect.height + margin + ph < vh) {
+                    top = rect.top + rect.height + margin;
+                } else {
+                    top = rect.top - ph - margin;
+                }
+                left = rect.left + rect.width / 2 - pw / 2;
+            } else {
+                top = vh / 2 - ph / 2;
+                left = vw / 2 - pw / 2;
+            }
+
+            left = Math.max(margin, Math.min(left, vw - pw - margin));
+            top  = Math.max(margin, Math.min(top,  vh - ph - margin));
+            popover.style.left = left + 'px';
+            popover.style.top  = top  + 'px';
+        }
+
+        function tutApplyRect(rect) {
+            if (!rect) return;
+            spotlight.style.top    = rect.top    + 'px';
+            spotlight.style.left   = rect.left   + 'px';
+            spotlight.style.width  = rect.width  + 'px';
+            spotlight.style.height = rect.height + 'px';
+        }
+
+        function tutRenderStep(idx, animate) {
+            // Manage fake change indicator
+            if (idx === TUT_CHANGE_STEP) {
+                tutShowFakeChange();
+            } else {
+                tutHideFakeChange();
+            }
+
+            const step = TUTORIAL_STEPS[idx];
+            const el = step.target();
+            const rect = tutScrollAndGetRect(el);
+
+            tutApplyRect(rect);
+
+            // Progress dots
+            tutProgress.innerHTML = '';
+            TUTORIAL_STEPS.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.className = 'tut-dot' + (i === idx ? ' active' : '');
+                tutProgress.appendChild(dot);
+            });
+
+            tutStepCount.textContent = `Step ${idx + 1} of ${TUTORIAL_STEPS.length}`;
+            tutNextBtn.textContent = idx === TUTORIAL_STEPS.length - 1 ? 'Done' : 'Next';
+
+            if (animate) {
+                popover.classList.add('transitioning');
+                setTimeout(() => {
+                    tutTitle.textContent = step.title;
+                    tutBody.textContent  = step.body;
+                    tutPositionPopover(rect);
+                    popover.classList.remove('transitioning');
+                }, 200);
+            } else {
+                tutTitle.textContent = step.title;
+                tutBody.textContent  = step.body;
+                tutPositionPopover(rect);
+            }
+        }
+
+        function tutStart() {
+            tutActive = true;
+            tutStep = 0;
+            scrim.classList.add('active');
+            spotlight.classList.add('active');
+            popover.classList.add('active');
+            tutRenderStep(0, false);
+        }
+
+        function tutEnd() {
+            tutHideFakeChange();
+            tutActive = false;
+            scrim.classList.remove('active');
+            spotlight.classList.remove('active');
+            popover.classList.remove('active');
+            popover.classList.remove('transitioning');
+        }
+
+        tutNextBtn.addEventListener('click', () => {
+            if (tutStep === TUTORIAL_STEPS.length - 1) { tutEnd(); return; }
+            tutStep++;
+            tutRenderStep(tutStep, true);
+        });
+        tutSkipBtn.addEventListener('click', tutEnd);
+
+        document.getElementById('helpBtn').addEventListener('click', tutStart);
+
+        window.addEventListener('resize', () => {
+            if (tutActive) tutRenderStep(tutStep, false);
+        });
+
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');
         const savedTheme = localStorage.getItem('safeCounterTheme');
