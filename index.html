@@ -407,7 +407,7 @@
                 label.textContent = key;
                 label.addEventListener('click', () => {
                     const currentValue = DEFAULTS[key].value;
-                    showCustomModal(`Enter new default for ${key}:`, currentValue, (newValue) => {
+                    showCustomModal(`Enter new default for ${key}:`, currentValue, DEFAULTS[key].increment, (newValue) => {
                         if (newValue !== null) {
                             if (!isNaN(newValue) && newValue >= 0) {
                                 DEFAULTS[key].value = newValue;
@@ -665,10 +665,11 @@
             updateAllCalculations();
         }
         
-        function showCustomModal(title, currentValue, callback) {
+        function showCustomModal(title, currentValue, step, callback) {
             document.getElementById('modalTitle').textContent = title;
             const input = document.getElementById('modalInput');
             input.value = currentValue;
+            input.step = step;
             
             document.getElementById('modalOverlay').style.display = 'block';
             document.getElementById('customModal').style.display = 'block';
